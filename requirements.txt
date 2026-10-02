@@ -1,0 +1,23 @@
+# Dependensi proyek Deteksi Katarak (MobileNetV2)
+# Instal dengan: pip install -r requirements.txt
+#
+# Catatan: google.colab tidak dicantumkan karena hanya tersedia di Google Colab.
+
+# Model & training (sudah termasuk Keras 3)
+tensorflow>=2.16
+
+# Komputasi numerik
+numpy>=1.26
+
+# Evaluasi (confusion matrix, classification report)
+scikit-learn>=1.3
+
+# Visualisasi
+matplotlib>=3.8
+seaborn>=0.13
+
+# Membaca & memverifikasi gambar (dipakai PIL dan load_img Keras)
+pillow>=10.0
+
+# Mengunduh dataset dari Kaggle
+kagglehub>=0.3
