@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import * as schema from "./schema.js";
+import * as appSchema from "./schema.js";
+import * as authSchema from "./auth-schema.js";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -18,4 +19,7 @@ pool.on("error", (err) => {
   console.error("Koneksi idle terputus:", err.message);
 });
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle({
+  client: pool,
+  schema: { ...appSchema, ...authSchema }
+});
