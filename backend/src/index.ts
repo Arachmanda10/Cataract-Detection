@@ -1,9 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import { sql } from 'drizzle-orm';
-import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
+import { toNodeHandler } from 'better-auth/node';
 import { db } from './db/index.js';
 import { auth } from './auth.js';
+import { requireAuth, requireAdmin } from './middleware/auth.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -27,19 +28,15 @@ app.get('/health/db', async (_req, res) => {
   }
 });
 
-// Cek session user
-app.get("/api/me", async (req, res) => {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
-
-  if(!session){
-    res.status(401).json({ error: "Belum Login" });
-    return;
-  }
-
-  res.json(session.user);
+// Wajib Login
+app.get("/api/me", requireAuth, (req, res) => {
+  res.json(req.authSession?.user);
 });
+
+// Wajib Admin
+app.get("/api/admin/ping", requireAuth, requireAdmin, (_req, res) =>{
+  res.json({ message: "Halo Admin!"});
+})
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
