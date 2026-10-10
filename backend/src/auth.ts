@@ -13,13 +13,14 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    resetPasswordTokenExpiresIn: 60 * 60, // 1 jam
-    revokeSessionsOnPasswordReset: true,
+    resetPasswordTokenExpiresIn: 60 * 60, // token berlaku 1 jam (dalam detik)
+    revokeSessionsOnPasswordReset: true, // cabut semua session lama setelah reset
     sendResetPassword: async ({ user, url }) => {
+      // Sengaja TIDAK memakai await (lihat penjelasan di bawah)
       void sendEmail({
         to: user.email,
-        subject: "Reset Password Akun Cataract Detection",
-        text: `Klik link berikut untuk mereset password Anda (berlaku 1 jam): ${url}, jika bukan anda yang meminta abaikan email ini.`,
+        subject: "Reset password akun Cataract Detection",
+        text: `Klik tautan berikut untuk mengatur ulang password Anda (berlaku 1 jam):\n\n${url}\n\nJika bukan Anda yang meminta, abaikan email ini.`,
       });
     },
   },
