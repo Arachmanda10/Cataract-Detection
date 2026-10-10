@@ -38,6 +38,10 @@ app.get("/api/admin/ping", requireAuth, requireAdmin, (_req, res) =>{
   res.json({ message: "Halo Admin!"});
 })
 
+app.get("/reset-password", (req, res) => {
+  res.json({ token: req.query.token, error:  req.query.error });
+}); 
+
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
