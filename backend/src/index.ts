@@ -42,6 +42,47 @@ app.get("/reset-password", (req, res) => {
   res.json({ token: req.query.token, error:  req.query.error });
 }); 
 
+// SEMENTARA: halaman uji login Google, hapus saat frontend sudah ada
+app.get("/test-login", (_req, res) => {
+  res.type("html").send(`<!doctype html>
+<html lang="id">
+<head><meta charset="utf-8"><title>Tes Login Google</title></head>
+<body style="font-family: sans-serif; max-width: 640px; margin: 40px auto;">
+  <h1>Tes Login Google</h1>
+  <button id="login">Login dengan Google</button>
+  <button id="logout">Logout</button>
+  <h3>Hasil /api/me</h3>
+  <pre id="out">memuat...</pre>
+  <script>
+    async function showMe() {
+      const res = await fetch("/api/me");
+      document.getElementById("out").textContent =
+        res.status + " " + JSON.stringify(await res.json(), null, 2);
+    }
+    document.getElementById("login").onclick = async () => {
+      const res = await fetch("/api/auth/sign-in/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "google", callbackURL: "/test-login" }),
+      });
+      const data = await res.json();
+      if (!data.url) { alert(JSON.stringify(data)); return; }
+      window.location.href = data.url;
+    };
+    document.getElementById("logout").onclick = async () => {
+      await fetch("/api/auth/sign-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      showMe();
+    };
+    showMe();
+  </script>
+</body>
+</html>`);
+});
+
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });
