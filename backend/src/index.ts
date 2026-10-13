@@ -5,6 +5,8 @@ import { toNodeHandler } from 'better-auth/node';
 import { db } from './db/index.js';
 import { auth } from './auth.js';
 import { requireAuth, requireAdmin } from './middleware/auth.js';
+import { errorHandler } from "./middleware/error.js";
+import { uploadsRouter } from "./routes/upload.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -13,6 +15,9 @@ const PORT = Number(process.env.PORT) || 3000;
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
+
+app.use("/api/uploads", uploadsRouter);
+
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -82,6 +87,8 @@ app.get("/test-login", (_req, res) => {
 </body>
 </html>`);
 });
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);

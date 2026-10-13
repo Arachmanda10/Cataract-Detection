@@ -45,17 +45,12 @@ export async function uploadImage(
 }
 
 //Tautan sementara untuk mengakses gambar yang diunggah
-export async function getSignedUrlForImage(key: string, expiresIn: number = 300) {
-    return getSignedUrl(
-        s3,
-        new GetObjectCommand({
-            Bucket: bucket,
-            Key: key,
-        }),
-        {
-            expiresIn,
-        });
+export async function getSignedImageUrl(key: string, expiresIn = 300) {
+  return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+    expiresIn,
+  });
 }
+
 
 export async function deleteImage(key: string) {
     await s3.send(
