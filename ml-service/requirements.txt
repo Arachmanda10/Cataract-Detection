@@ -1,6 +1,6 @@
-fastapi
-uvicorn[standard]
-python-multipart
-pillow
-numpy
-ai-edge-litert
+ai-edge-litert==2.3.0
+fastapi==0.143.1
+numpy==2.5.4
+pillow==12.3.0
+python-multipart==0.0.32
+uvicorn[standard]==0.54.0
