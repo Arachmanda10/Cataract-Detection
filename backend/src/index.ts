@@ -7,6 +7,8 @@ import { auth } from './auth.js';
 import { requireAuth, requireAdmin } from './middleware/auth.js';
 import { errorHandler } from "./middleware/error.js";
 import { uploadsRouter } from "./routes/upload.js";
+import { predictionsRouter } from './routes/predictions.js';
+import { loadModel } from './ml.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -17,7 +19,7 @@ app.all('/api/auth/*splat', toNodeHandler(auth));
 app.use(express.json());
 
 app.use("/api/uploads", uploadsRouter);
-
+app.use("/api/predictions", predictionsRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -92,4 +94,7 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
+  loadModel()
+    .then(() => console.log("Model ONNX siap"))
+    .catch((err) => console.error("Gagal memuat model: ", err));
 });
