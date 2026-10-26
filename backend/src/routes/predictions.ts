@@ -4,10 +4,11 @@ import { Router } from "express";
 import multer from "multer";
 import sharp from "sharp";
 import { db } from "../db/index.js";
-import { predictions } from "../db/schema.js";
+import { predictions, feedbacks } from "../db/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import { deleteImage, getSignedImageUrl, uploadImage } from "../storage.js";
 import { predict } from "../ml.js";
+import { boolean, uuid } from "better-auth";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_FORMATS = ["jpeg", "png", "webp"];
@@ -143,7 +144,12 @@ predictionsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  res.json(await toResponse(row));
+    const [fb] = await db
+    .select({ isCorrect: feedbacks.isCorrect, comment: feedbacks.comment, updatedAt: feedbacks.updateAt })
+    .from(feedbacks)
+    .where(eq(feedbacks.predictionId, row.id));
+
+  res.json({ ...(await toResponse(row)), feedback: fb ?? null });
 });
 
 // DELETE /api/predictions/:id
@@ -166,5 +172,80 @@ predictionsRouter.delete("/:id", async (req, res) => {
 
   // Baris database sudah terhapus; hapus gambarnya (kegagalan di sini tidak menggagalkan respons)
   await deleteImage(row.imageKey).catch((err) => console.error("Gagal hapus gambar:", err));
+  res.status(204).send();
+});
+
+// PUT /api/predictions/:id/feedback   body: { "isCorrect": true, "comment": "opsional" }
+predictionsRouter.put("/:id/feedback", async (req, res) => {
+  const id = String(req.params.id);
+  const userId = req.authSession!.user.id;
+
+  const { isCorrect, comment } = (req.body ?? {}) as {
+    isCorrect?: unknown;
+    comment?: unknown;
+  };
+
+  if (typeof isCorrect !== "boolean") {
+    res.status(400).json({ message: "isCorrect wajib berupa true atau false" });
+    return;
+  }
+  if (comment !== undefined && comment !== null && (typeof comment !== "string" || comment.length > 500)) {
+    res.status(400).json({ message: "comment harus teks, maksimal 500 karakter" });
+    return;
+  }
+
+  if (!UUID_RE.test(id)) {
+    res.status(404).json({ message: "Prediksi tidak ditemukan" });
+    return;
+  }
+
+  // Pastikan prediksi ini milik user yang sedang login
+  const [pred] = await db
+    .select({ id: predictions.id })
+    .from(predictions)
+    .where(and(eq(predictions.id, id), eq(predictions.userId, userId)));
+
+  if (!pred) {
+    res.status(404).json({ message: "Prediksi tidak ditemukan" });
+    return;
+  }
+
+  const cleanComment = typeof comment === "string" && comment.trim() ? comment.trim() : null;
+
+  // Upsert: buat baru, atau timpa jika prediksi ini sudah pernah diberi feedback
+  const [row] = await db
+    .insert(feedbacks)
+    .values({ predictionId: id, userId, isCorrect, comment: cleanComment })
+    .onConflictDoUpdate({
+      target: feedbacks.predictionId,
+      set: { isCorrect, comment: cleanComment, updateAt: new Date() },
+    })
+    .returning();
+
+  res.json({
+    predictionId: row!.predictionId,
+    isCorrect: row!.isCorrect,
+    comment: row!.comment,
+    updatedAt: row!.updateAt,
+  });
+});
+
+// DELETE /api/predictions/:id/feedback
+predictionsRouter.delete("/:id/feedback", async (req, res) => {
+  const id = String(req.params.id);
+  if (!UUID_RE.test(id)) {
+    res.status(404).json({ message: "Feedback tidak ditemukan" });
+    return;
+  }
+
+  const [row] = await db
+    .delete(feedbacks)
+    .where(and(eq(feedbacks.predictionId, id), eq(feedbacks.userId, req.authSession!.user.id)))
+    .returning({ id: feedbacks.id });
+
+  if (!row) {
+    res.status(404).json({ message: "Feedback tidak ditemukan" });
+    return;
+  }
   res.status(204).send();
 });
