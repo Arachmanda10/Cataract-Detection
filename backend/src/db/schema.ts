@@ -1,5 +1,6 @@
-import { index, integer, jsonb, pgTable, real, text, timestamp, uuid} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, real, text, boolean, uniqueIndex, timestamp, uuid} from "drizzle-orm/pg-core";
 import { user } from "./auth-schema.js"
+import { create } from "node:domain";
 
 export const predictions = pgTable(
     "predictions",
@@ -16,4 +17,23 @@ export const predictions = pgTable(
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
     (t) => [index("prediction_user_created_idx").on(t.userId, t.createdAt)],
+);
+
+
+export const feedbacks = pgTable(
+    "feedbacks",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        predictionId: uuid("prediction_id")
+            .notNull()
+            .references(() => predictions.id, { onDelete: "cascade" }),
+        userId: text("user_id")
+            .notNull()
+            .references(() => user.id, { onDelete: "cascade" }),
+        isCorrect: boolean("is_correct").notNull(),
+        comment: text("comment"),
+        createAt: timestamp("created_at").defaultNow().notNull(),
+        updateAt: timestamp("updated_at").defaultNow().notNull(),
+    },
+    (t) => [index("feedbacks_prediction_unique").on(t.predictionId)],
 );

@@ -1,1 +1,0 @@
-ALTER TABLE "predictions" ADD COLUMN "image_key" text NOT NULL;
