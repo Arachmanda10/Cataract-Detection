@@ -35,5 +35,5 @@ export const feedbacks = pgTable(
         createAt: timestamp("created_at").defaultNow().notNull(),
         updateAt: timestamp("updated_at").defaultNow().notNull(),
     },
-    (t) => [index("feedbacks_prediction_unique").on(t.predictionId)],
+    (t) => [uniqueIndex("feedbacks_prediction_unique").on(t.predictionId)],
 );

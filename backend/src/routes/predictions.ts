@@ -8,7 +8,7 @@ import { predictions, feedbacks } from "../db/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import { deleteImage, getSignedImageUrl, uploadImage } from "../storage.js";
 import { predict } from "../ml.js";
-import { boolean, uuid } from "better-auth";
+
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_FORMATS = ["jpeg", "png", "webp"];
@@ -24,7 +24,7 @@ predictionsRouter.use(requireAuth);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 //ubah satu baris database menjadi bentuk respon api(tambah url gambar)
-async function toResponse(row: typeof predictions.$inferInsert){
+async function toResponse(row: typeof predictions.$inferSelect){
   return {
     id: row.id,
     label: row.label,
