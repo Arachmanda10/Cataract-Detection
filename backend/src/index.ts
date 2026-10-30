@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/error.js";
 import { uploadsRouter } from "./routes/upload.js";
 import { predictionsRouter } from './routes/predictions.js';
 import { loadModel } from './ml.js';
+import { dashboardRouter } from './routes/dashboard.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -20,6 +21,7 @@ app.use(express.json());
 
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/predictions", predictionsRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
