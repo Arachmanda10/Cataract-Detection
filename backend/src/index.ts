@@ -10,6 +10,9 @@ import { uploadsRouter } from "./routes/upload.js";
 import { predictionsRouter } from './routes/predictions.js';
 import { loadModel } from './ml.js';
 import { dashboardRouter } from './routes/dashboard.js';
+import { adminRouter } from './routes/admin.js';
+import { admin } from 'better-auth/plugins';
+
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -22,6 +25,7 @@ app.use(express.json());
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/predictions", predictionsRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/admin", adminRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
