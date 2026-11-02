@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { user } from "../db/auth-schema.js";
 import { feedbacks, predictions } from "../db/schema.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
-import { getSignedImageUrl } from "../storage.js";
+import { deleteImage, getSignedImageUrl } from "../storage.js";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin); // semua route di bawah ini khusus admin
@@ -181,3 +181,44 @@ adminRouter.get("/system", async (_req, res) => {
     database: { status: database, pingMs: dbPingMs },
   });
 });
+
+
+//DELETE /api/admin/users/:id  -> hapus user beserta gambar di B2
+adminRouter.delete("/users/:id", async (req, res) => {
+  const id = String(req.params.id);
+
+  if(id === req.authSession!.user.id){ 
+    res.status(404).json({ message: "Tidak bisa menghapus diri sendiri" });
+    return;
+  }
+
+  const [target] = await db.select({id: user.id}).from(user).where(eq(user.id, id));
+  if (!target) {
+    res.status(404).json({ message: "User tidak ditemukan" });
+    return;
+  }
+
+  //1. Mengambil semua key user
+  const keys = await db
+    .select({key: predictions.imageKey})
+    .from(predictions)
+    .where(eq(predictions.userId, id));
+
+  // 2. Hapus gambar di B2 DULU. Jika ada yang gagal, berhenti: daftar key masih ada di
+  //    database, jadi admin bisa mengulang (hapus di B2 bersifat aman diulang).
+  const results = await Promise.allSettled(keys.map((k) => deleteImage(k.key)));
+  const failed = results.filter((r) => r.status === "rejected").length;
+  if(failed > 0){
+    res.status(502).json({ 
+      message: `Sebagian gambar gagal dihapus dari penyimpanan; user belum dihapus, coba lagi nanti`,
+      failedImages: failed, 
+    });
+    return;
+  }
+
+  // 3. Hapus user beserta prediksi di database, karena cascade
+  await db.delete(user).where(eq(user.id, id));
+  res.json({ deletedImages: keys.length });
+
+});
+

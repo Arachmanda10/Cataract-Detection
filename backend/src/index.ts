@@ -11,14 +11,25 @@ import { predictionsRouter } from './routes/predictions.js';
 import { loadModel } from './ml.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { adminRouter } from './routes/admin.js';
-import { admin } from 'better-auth/plugins';
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 
 const app = express();
+app.set('trust proxy', true); // Jika menggunakan reverse proxy seperti Nginx
+app.use(helmet());
 const PORT = Number(process.env.PORT) || 3000;
 
 //Handler better-auth untuk menangani request ke /auth
 app.all('/api/auth/*splat', toNodeHandler(auth));
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  limit: 300, // Batasi setiap IP ke 300 permintaan per windowMs
+  standardHeaders: "draft-8", // Kirim header rate limit standar
+  legacyHeaders: false, // Nonaktifkan header rate limit lama
+  message: { message: "Terlalu banyak request, silakan coba lagi nanti." },
+});
+app.use("/api/", apiLimiter);
 
 app.use(express.json());
 

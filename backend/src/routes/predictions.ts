@@ -8,6 +8,7 @@ import { predictions, feedbacks } from "../db/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import { deleteImage, getSignedImageUrl, uploadImage } from "../storage.js";
 import { predict } from "../ml.js";
+import  rateLimit from "express-rate-limit";
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -20,6 +21,14 @@ const upload = multer({
 
 export const predictionsRouter = Router();
 predictionsRouter.use(requireAuth);
+const predictLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 menit
+  limit: 20, // Batasi setiap IP ke 20 permintaan per windowMs
+  standardHeaders: "draft-8", // Kirim header rate limit standar
+  legacyHeaders: false, // Nonaktifkan header rate limit lama
+  keyGenerator: (req) => req.authSession!.user.id, 
+  message: { message: "Batas prediksi tercapai (20 kali per 10 menit), silakan coba lagi nanti." },
+});
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,7 +46,7 @@ async function toResponse(row: typeof predictions.$inferSelect){
 }
 
 // POST /api/predictions  (form-data, field "image")
-predictionsRouter.post("/", upload.single("image"), async (req, res) => {
+predictionsRouter.post("/", predictLimiter, upload.single("image"), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ message: "File dengan field 'image' wajib diunggah" });
     return;
