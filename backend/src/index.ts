@@ -16,7 +16,7 @@ import rateLimit from "express-rate-limit";
 
 
 const app = express();
-app.set('trust proxy', true); // Jika menggunakan reverse proxy seperti Nginx
+app.set('trust proxy', process.env.NODE_ENV === "production" ? 1 : false); // Jika menggunakan reverse proxy seperti Nginx
 app.use(helmet());
 const PORT = Number(process.env.PORT) || 3000;
 
