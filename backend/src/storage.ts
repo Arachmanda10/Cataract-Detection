@@ -1,6 +1,7 @@
 import {
     DeleteObjectCommand,
     GetObjectCommand,
+    ListObjectsV2Command,
     PutObjectCommand,
     S3Client,
 } from "@aws-sdk/client-s3";
@@ -59,4 +60,31 @@ export async function deleteImage(key: string) {
             Key: key,
         }),
     );
+}
+
+// Hapus SEMUA file dengan awalan tertentu (mis. "users/<id>/"), termasuk yang tidak tercatat di database
+export async function deleteImagesByPrefix(prefix: string) {
+  let deleted = 0;
+  let failed = 0;
+  let token: string | undefined;
+
+  do {
+    const page = await s3.send(
+      new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }),
+    );
+    const keys = (page.Contents ?? []).flatMap((o) => (o.Key ? [o.Key] : []));
+
+    // Hapus bergelombang (10 sekaligus) agar tidak membanjiri B2
+    for (let i = 0; i < keys.length; i += 10) {
+      const results = await Promise.allSettled(keys.slice(i, i + 10).map((k) => deleteImage(k)));
+      for (const r of results) {
+        if (r.status === "fulfilled") deleted++;
+        else failed++;
+      }
+    }
+
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token);
+
+  return { deleted, failed };
 }
