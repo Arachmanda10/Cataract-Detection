@@ -13,10 +13,14 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { adminRouter } from './routes/admin.js';
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
+import { openapi } from "./docs/openapi.js";
 
 
 const app = express();
 app.set('trust proxy', process.env.NODE_ENV === "production" ? 1 : false); // Jika menggunakan reverse proxy seperti Nginx
+app.get('/openapi.json', (_req, res) => res.json(openapi));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, { customSiteTitle: "Cataract Detection API Docs" }));
 app.use(helmet());
 const PORT = Number(process.env.PORT) || 3000;
 
