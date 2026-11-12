@@ -1,0 +1,70 @@
+name: Backend CI
+
+on: 
+  push:
+    branches: [main]
+    paths: [
+      'backend/**',
+      '.github/workflows/backend-ci.yml'
+    ]
+  pull_request:
+    paths: [
+      'backend/**',
+      '.github/workflows/backend-ci.yml'
+    ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck 
+      - run: npm run build
+      - run: npm test 
+  
+    docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build --target runtime -t cataract-api ./backend
+
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 3000:3000 \
+            -e NODE_ENV=production -e PORT=3000 \
+            -e DATABASE_URL=postgres://x:x@localhost:5432/x \
+            -e BETTER_AUTH_SECRET=ci-dummy-secret-ci-dummy-secret-123456 \
+            -e BETTER_AUTH_URL=http://localhost:3000 \
+            -e B2_KEY_ID=x -e B2_APPLICATION_KEY=x -e B2_BUCKET=x \
+            -e B2_ENDPOINT=https://s3.us-west-004.backblazeb2.com \
+            -e RESEND_API_KEY=x -e EMAIL_FROM=test@example.com \
+            -e GOOGLE_CLIENT_ID=x -e GOOGLE_CLIENT_SECRET=x \
+            cataract-api
+
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then ok=1; break; fi
+            sleep 2
+          done
+          [ "$ok" = 1 ] || { docker logs api; echo "Server tidak merespons"; exit 1; }
+
+          ok=0
+          for i in $(seq 1 30); do
+            if docker logs api 2>&1 | grep -q "Model ONNX siap"; then ok=1; break; fi
+            sleep 2
+          done
+          [ "$ok" = 1 ] || { docker logs api; echo "Model ONNX tidak termuat"; exit 1; }
+          echo "Image OK: server hidup dan model ONNX termuat"
