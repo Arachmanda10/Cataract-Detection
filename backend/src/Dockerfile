@@ -19,7 +19,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY package*.json ./
+COPY package.json ./
 COPY models ./models
 USER node
 EXPOSE 3000
