@@ -15,6 +15,9 @@ const SIZE = 224;
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
 
+sharp.cache(false); // disable cache sharp agar tidak memakan memori terlalu banyak
+sharp.concurrency(1); // disable concurrency sharp agar tidak memakan memori terlalu banyak
+
 // Model dimuat sekali, lalu dipakai ulang oleh semua request
 export function loadModel(): Promise<ort.InferenceSession> {
   sessionPromise ??= ort.InferenceSession.create(MODEL_PATH);
