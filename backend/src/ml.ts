@@ -20,7 +20,10 @@ sharp.concurrency(1); // disable concurrency sharp agar tidak memakan memori ter
 
 // Model dimuat sekali, lalu dipakai ulang oleh semua request
 export function loadModel(): Promise<ort.InferenceSession> {
-  sessionPromise ??= ort.InferenceSession.create(MODEL_PATH);
+  sessionPromise ??= ort.InferenceSession.create(MODEL_PATH, {
+    intraOpNumThreads: 1, // disable multithreading agar tidak memakan memori terlalu banyak
+    interOpNumThreads: 1, // disable multithreading agar tidak memakan memori terlalu banyak
+  });
   return sessionPromise;
 }
 
