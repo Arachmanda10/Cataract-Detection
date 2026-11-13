@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ---- Tahap 1: build (butuh devDependencies untuk tsc) ----
 FROM node:22-slim AS build
 WORKDIR /app
@@ -9,11 +7,13 @@ COPY tsconfig*.json ./
 COPY src ./src
 RUN npm run build
 
+
 # ---- Tahap 2: dependensi produksi saja ----
 FROM node:22-slim AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
+
 
 # ---- Tahap 3: image akhir ----
 FROM node:22-slim AS runtime
