@@ -7,6 +7,10 @@ import * as authSchema from "./db/auth-schema.js";
 import { sendEmail } from "./email.js";
 
 export const auth = betterAuth({
+  trustedOrigins: (process.env.TRUSTED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: authSchema,
