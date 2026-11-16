@@ -18,6 +18,10 @@ export default function Home() {
           <p>
             Masuk sebagai <b>{session.user.name}</b> ({session.user.email})
           </p>
+          <Link href="/predict" className="w-fit rounded bg-black px-3 py-2 text-white">
+            Mulai deteksi
+          </Link>
+          <hr></hr>
           <button
             onClick={() => authClient.signOut()}
             className="w-fit rounded border px-3 py-2"
