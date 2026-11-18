@@ -22,6 +22,25 @@ app.set('trust proxy', process.env.NODE_ENV === "production" ? 1 : false); // Ji
 app.get('/openapi.json', (_req, res) => res.json(openapi));
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, { customSiteTitle: "Cataract Detection API Docs" }));
 app.use(helmet());
+// SEMENTARA: hapus setelah dicek. Menyamarkan IP agar aman dilihat.
+const maskIp = (v: unknown) =>
+  String(v ?? "-")
+    .replace(/(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}/g, "$1.x.x")
+    .replace(/([0-9a-f]{1,4}:[0-9a-f]{1,4}):[0-9a-f:]+/gi, "$1:x");
+
+app.use("/api", (req, _res, next) => {
+  const h = req.headers;
+  console.log(
+    "DIAG",
+    `ip=${maskIp(req.ip)}`,
+    `xff=${maskIp(h["x-forwarded-for"])}`,
+    `xreal=${maskIp(h["x-real-ip"])}`,
+    `vfwd=${maskIp(h["x-vercel-forwarded-for"])}`,
+    `fwd=${maskIp(h["forwarded"])}`,
+    `tci=${maskIp(h["true-client-ip"])}`,
+  );
+  next();
+});
 const PORT = Number(process.env.PORT) || 3000;
 
 //Handler better-auth untuk menangani request ke /auth
