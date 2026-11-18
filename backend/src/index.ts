@@ -33,6 +33,11 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Nonaktifkan header rate limit lama
   message: { message: "Terlalu banyak request, silakan coba lagi nanti." },
 });
+// SEMENTARA: hapus setelah dicek
+app.use("/api", (req, _res, next) => {
+  console.log("DIAG ip:", req.ip, "| xff:", req.headers["x-forwarded-for"]);
+  next();
+});
 app.use("/api/", apiLimiter);
 
 app.use(express.json());
