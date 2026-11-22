@@ -9,7 +9,7 @@ import {
   uploadImage,
 } from "../storage.js";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_FORMATS = ["jpeg", "png", "webp"];
 
 // File ditampung di memori (buffer), karena akan diproses lalu langsung dikirim ke B2

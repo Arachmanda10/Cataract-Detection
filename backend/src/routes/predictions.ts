@@ -11,7 +11,7 @@ import { predict } from "../ml.js";
 import  rateLimit from "express-rate-limit";
 
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_FORMATS = ["jpeg", "png", "webp"];
 
 const upload = multer({

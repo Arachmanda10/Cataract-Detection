@@ -131,7 +131,7 @@ export const openapi = {
         tags: ["Predictions"],
         summary: "Unggah foto mata dan dapatkan prediksi",
         description:
-          "Foto divalidasi (JPEG/PNG/WebP, maks 5 MB), diprediksi dengan model, disimpan ke B2, lalu hasilnya dicatat. " +
+          "Foto divalidasi (JPEG/PNG/WebP, maks 4 MB), diprediksi dengan model, disimpan ke B2, lalu hasilnya dicatat. " +
           "Dibatasi 20 prediksi per 10 menit per user.",
         security: needLogin,
         requestBody: {
@@ -141,7 +141,7 @@ export const openapi = {
               schema: {
                 type: "object",
                 required: ["image"],
-                properties: { image: { type: "string", format: "binary", description: "Foto mata (JPEG, PNG, atau WebP, maks 5 MB)" } },
+                properties: { image: { type: "string", format: "binary", description: "Foto mata (JPEG, PNG, atau WebP, maks 4 MB)" } },
               },
             },
           },
