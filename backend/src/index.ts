@@ -52,11 +52,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false, // Nonaktifkan header rate limit lama
   message: { message: "Terlalu banyak request, silakan coba lagi nanti." },
 });
-// SEMENTARA: hapus setelah dicek
-app.use("/api", (req, _res, next) => {
-  console.log("DIAG ip:", req.ip, "| xff:", req.headers["x-forwarded-for"]);
-  next();
-});
+
 app.use("/api/", apiLimiter);
 
 app.use(express.json());
@@ -137,9 +133,13 @@ app.get("/test-login", (_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-  loadModel()
-    .then(() => console.log("Model ONNX siap"))
-    .catch((err) => console.error("Gagal memuat model: ", err));
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+    loadModel()
+      .then(() => console.log("Model ONNX siap"))
+      .catch((err) => console.error("Gagal memuat model: ", err));
+  });
+}
+
+export default app;
