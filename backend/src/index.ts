@@ -13,14 +13,33 @@ import { dashboardRouter } from './routes/dashboard.js';
 import { adminRouter } from './routes/admin.js';
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import swaggerUi from "swagger-ui-express";
 import { openapi } from "./docs/openapi.js";
+
 
 
 const app = express();
 app.set('trust proxy', process.env.NODE_ENV === "production" ? 1 : false); // Jika menggunakan reverse proxy seperti Nginx
 app.get('/openapi.json', (_req, res) => res.json(openapi));
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi, { customSiteTitle: "Cataract Detection API Docs" }));
+app.get("/docs", (_req, res) => {
+  res.type("html").send(`<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cataract Detection API Docs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({ url: "/openapi.json", dom_id: "#swagger-ui" });
+    };
+  </script>
+</body>
+</html>`);
+});
 app.use(helmet());
 // SEMENTARA: hapus setelah dicek. Menyamarkan IP agar aman dilihat.
 const maskIp = (v: unknown) =>
