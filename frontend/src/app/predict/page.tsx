@@ -1,20 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FeedbackForm } from "@/components/feedback-form";
 import { api, ApiError } from "@/lib/api";
-import { authClient } from "@/lib/auth-client";
 import { shrinkImage } from "@/lib/image";
 import type { Prediction } from "@/lib/types";
+import { AppNav } from "@/components/app-nav";
+import { LABEL_TEXT } from "@/lib/labels";
+import { useRequireLogin } from "@/lib/use-require-login";
 
-const LABEL_TEXT = { cataract: "Terindikasi katarak", normal: "Normal" } as const;
 const MAX_RAW_SIZE = 20 * 1024 * 1024; // 20 MB sebelum diperkecil
 
 export default function PredictPage() {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const { ready } = useRequireLogin();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -23,10 +23,7 @@ export default function PredictPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Prediction | null>(null);
 
-  // Belum login -> kembali ke halaman login
-  useEffect(() => {
-    if (!isPending && !session) router.replace("/login");
-  }, [isPending, session, router]);
+  
 
   function pickFile(f: File | null) {
     if (preview) URL.revokeObjectURL(preview);
@@ -71,16 +68,14 @@ export default function PredictPage() {
     }
   }
 
-  if (isPending || !session) {
+  if (!ready) {
     return <main className="p-6">Memuat...</main>;
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Deteksi Katarak</h1>
-        <Link href="/" className="text-sm underline">Beranda</Link>
-      </header>
+      <AppNav />
+      <h1 className="text-2xl font-semibold">Deteksi Katarak</h1>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
         <input
