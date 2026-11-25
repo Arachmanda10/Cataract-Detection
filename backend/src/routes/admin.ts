@@ -188,7 +188,7 @@ adminRouter.delete("/users/:id", async (req, res) => {
   const id = String(req.params.id);
 
   if(id === req.authSession!.user.id){ 
-    res.status(404).json({ message: "Tidak bisa menghapus diri sendiri" });
+    res.status(400).json({ message: "Tidak bisa menghapus diri sendiri" });
     return;
   }
 
