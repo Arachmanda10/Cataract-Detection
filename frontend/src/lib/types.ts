@@ -49,3 +49,33 @@ export type Dashboard = {
   daily: { date: string; total: number }[]; // date: "YYYY-MM-DD" (UTC)
   recent: { id: string; label: Label; confidence: number; createdAt: string }[];
 };
+
+export type AdminStats = {
+  users: { total: number; admins: number; banned: number };
+  predictions: {
+    total: number;
+    cataract: number;
+    normal: number;
+    last24h: number;
+    avgConfidence: number | null;
+    avgInferenceMs: number | null;
+  };
+  feedback: {
+    total: number;
+    correct: number;
+    correctRate: number | null;
+    byPredictedLabel: {
+      label: Label;
+      total: number;
+      correct: number;
+      correctRate: number | null;
+    }[];
+  };
+};
+
+export type AdminSystem = {
+  uptimeSeconds: number;
+  nodeVersion: string;
+  memoryMb: { rss: number; heapUsed: number; external: number };
+  database: { status: "ok" | "error"; pingMs: number };
+};
