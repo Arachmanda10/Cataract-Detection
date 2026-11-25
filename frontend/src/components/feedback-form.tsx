@@ -3,11 +3,34 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 
-export function FeedbackForm({ predictionId }: { predictionId: string }) {
-  const [comment, setComment] = useState("");
-  const [saved, setSaved] = useState<boolean | null>(null);
+type Initial = { isCorrect: boolean; comment: string | null } | null;
+
+export function FeedbackForm({
+  predictionId,
+  initial = null,
+}: {
+  predictionId: string;
+  initial?: Initial;
+}) {
+  const [comment, setComment] = useState(initial?.comment ?? "");
+  const [saved, setSaved] = useState<boolean | null>(initial?.isCorrect ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setSaving(true);
+    setError(null);
+    try {
+      await api(`/api/predictions/${predictionId}/feedback`, { method: "DELETE" });
+      setSaved(null);
+      setComment("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus penilaian");
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   async function send(isCorrect: boolean) {
     setSaving(true);
@@ -53,10 +76,19 @@ export function FeedbackForm({ predictionId }: { predictionId: string }) {
           Salah
         </button>
       </div>
-      {saved !== null && (
-        <p className="text-sm text-green-700">
-          Terima kasih! Tersimpan: hasil dinilai {saved ? "benar" : "salah"}. Anda masih bisa mengubahnya.
-        </p>
+            {saved !== null && (
+        <>
+          <p className="text-sm text-green-700">
+            Tersimpan: hasil dinilai {saved ? "benar" : "salah"}. Anda masih bisa mengubahnya.
+          </p>
+          <button
+            onClick={remove}
+            disabled={saving}
+            className="self-start text-sm underline disabled:opacity-50"
+          >
+            Hapus penilaian
+          </button>
+        </>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </section>

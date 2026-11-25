@@ -32,3 +32,20 @@ export type PredictionList = {
   data: Prediction[];
   pagination: Pagination;
 }
+
+export type Dashboard = {
+  predictions: {
+    total: number;
+    cataract: number;
+    normal: number;
+    avgConfidence: number | null;
+  };
+  feedback: {
+    total: number;
+    correct: number;
+    incorrect: number;
+    correctRate: number | null;
+  };
+  daily: { date: string; total: number }[]; // date: "YYYY-MM-DD" (UTC)
+  recent: { id: string; label: Label; confidence: number; createdAt: string }[];
+};
