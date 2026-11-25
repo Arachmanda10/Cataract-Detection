@@ -8,20 +8,9 @@ import { api, ApiError } from "@/lib/api";
 import { LABEL_TEXT } from "@/lib/labels";
 import type { Dashboard } from "@/lib/types";
 import { useRequireLogin } from "@/lib/use-require-login";
+import { StatCard } from "@/components/stat-card";
+import { pct } from "@/lib/format";
 
-function StatCard({ title, value, note }: { title: string; value: string; note?: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded border p-4">
-      <span className="text-sm text-gray-600">{title}</span>
-      <span className="text-2xl font-semibold">{value}</span>
-      {note && <span className="text-xs text-gray-500">{note}</span>}
-    </div>
-  );
-}
-
-function pct(part: number, whole: number) {
-  return whole > 0 ? (part / whole) * 100 : 0;
-}
 
 export default function DashboardPage() {
   const router = useRouter();

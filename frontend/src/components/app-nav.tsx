@@ -14,6 +14,12 @@ export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const { data: session } = authClient.useSession();
+  const links =
+    session?.user.role === "admin"
+      ? [...LINKS, { href: "/admin", text: "Admin" }]
+      : LINKS;
+
   async function logout() {
     await authClient.signOut();
     router.replace("/login");
@@ -25,7 +31,7 @@ export function AppNav() {
         <Link href="/" className="font-semibold">
           Beranda
         </Link>
-        {LINKS.map((l) => (
+        {links.map((l) => (
           <Link
             key={l.href}
             href={l.href}
