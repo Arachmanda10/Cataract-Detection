@@ -79,3 +79,36 @@ export type AdminSystem = {
   memoryMb: { rss: number; heapUsed: number; external: number };
   database: { status: "ok" | "error"; pingMs: number };
 };
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role?: string | null;
+  banned?: boolean | null;
+  banReason?: string | null;
+  createdAt: string | Date;
+};
+
+export type AdminPredictionRow = {
+  id: string;
+  label: Label;
+  confidence: number;
+  inferenceMs: number;
+  createdAt: string;
+  userId: string;
+  userEmail: string;
+  feedbackCorrect: boolean | null;
+  feedbackComment: string | null;
+};
+
+export type AdminPredictionList = {
+  data: AdminPredictionRow[];
+  pagination: Pagination;
+};
+
+export type AdminPredictionDetail = Prediction & {
+  userId: string;
+  userEmail: string;
+  feedback: { isCorrect: boolean; comment: string | null } | null;
+};
