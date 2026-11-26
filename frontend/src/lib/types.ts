@@ -79,3 +79,13 @@ export type AdminSystem = {
   memoryMb: { rss: number; heapUsed: number; external: number };
   database: { status: "ok" | "error"; pingMs: number };
 };
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role?: string | null;
+  banned?: boolean | null;
+  banReason?: string | null;
+  createdAt: string | Date;
+};
