@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { ThemeToggle } from "./theme-toggle";
 
 const LINKS = [
   { href: "/predict", text: "Deteksi" },
@@ -41,9 +42,12 @@ export function AppNav() {
           </Link>
         ))}
       </div>
-      <button onClick={logout} className="text-sm underline">
-        Keluar
-      </button>
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
+        <button onClick={logout} className="text-sm underline">
+          Keluar
+        </button>
+      </div>
     </nav>
   );
 }
