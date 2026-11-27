@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { AuthShell } from "@/components/auth-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,22 +36,44 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Masuk</h1>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <input name="email" type="email" placeholder="Email" required className="rounded border p-2" />
-        <input name="password" type="password" placeholder="Password" required className="rounded border p-2" />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          disabled={loading}
-          className="rounded bg-black p-2 text-white disabled:opacity-50"
-        >
+    <AuthShell title="Masuk" description="Masuk untuk mulai mendeteksi dan melihat riwayat Anda.">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="nama@email.com"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Kata sandi</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+        {error && (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? "Memproses..." : "Masuk"}
-        </button>
+        </Button>
       </form>
-      <p className="text-sm">
-        Belum punya akun? <Link href="/register" className="underline">Daftar</Link>
+      <p className="text-sm text-muted-foreground">
+        Belum punya akun?{" "}
+        <Link href="/register" className="font-medium text-primary underline underline-offset-4">
+          Daftar
+        </Link>
       </p>
-    </main>
+    </AuthShell>
   );
 }

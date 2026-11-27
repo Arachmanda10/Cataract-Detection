@@ -3,14 +3,27 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FeedbackForm } from "@/components/feedback-form";
+import { PageShell } from "@/components/page-shell";
+import { PredictionResult } from "@/components/prediction-result";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api";
 import { shrinkImage } from "@/lib/image";
 import type { Prediction } from "@/lib/types";
-import { AppNav } from "@/components/app-nav";
-import { PredictionResult } from "@/components/prediction-result";
 import { useRequireLogin } from "@/lib/use-require-login";
 
 const MAX_RAW_SIZE = 20 * 1024 * 1024; // 20 MB sebelum diperkecil
+
+const TIPS = [
+  "Foto dari jarak dekat dengan mata terbuka lebar",
+  "Cahaya terang dan merata, tanpa lampu kilat",
+  "Fokus tajam dan tidak buram",
+  "Lepas kacamata agar tidak menutupi mata",
+];
 
 export default function PredictPage() {
   const router = useRouter();
@@ -22,8 +35,6 @@ export default function PredictPage() {
   const [slow, setSlow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Prediction | null>(null);
-
-  
 
   function pickFile(f: File | null) {
     if (preview) URL.revokeObjectURL(preview);
@@ -69,46 +80,92 @@ export default function PredictPage() {
   }
 
   if (!ready) {
-    return <main className="p-6">Memuat...</main>;
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <Skeleton className="h-72 w-full" />
+      </div>
+    );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-6">
-      <AppNav />
-      <h1 className="text-2xl font-semibold">Deteksi Katarak</h1>
+    <PageShell
+      title="Deteksi katarak"
+      description="Unggah foto mata untuk mendapat perkiraan awal dari model."
+    >
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl">Unggah foto</h2>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="foto">Foto mata</Label>
+                <Input
+                  id="foto"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Format JPG, PNG, atau WebP. Foto otomatis diperkecil sebelum dikirim.
+                </p>
+              </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
-          className="rounded border p-2"
-        />
-        {preview && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Pratinjau foto mata" className="max-h-72 rounded border object-contain" />
-        )}
-        <button
-          disabled={!file || loading}
-          className="rounded bg-black p-2 text-white disabled:opacity-50"
-        >
-          {loading ? "Menganalisis..." : "Analisis"}
-        </button>
-        {loading && slow && (
-          <p className="text-sm text-gray-600">
-            Server sedang bangun atau sibuk, mohon tunggu sebentar...
-          </p>
-        )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </form>
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt="Pratinjau foto mata"
+                  className="max-h-80 w-full rounded-lg border border-border bg-muted object-contain"
+                />
+              ) : (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {TIPS.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              )}
 
-      {result && (
-        <>
-          <PredictionResult prediction={result} />
+              <Button type="submit" disabled={!file || loading} className="w-full">
+                {loading ? "Menganalisis..." : "Analisis"}
+              </Button>
 
-          <FeedbackForm key={result.id} predictionId={result.id} />
-        </>
-      )}
-    </main>
+              {loading && slow && (
+                <Alert>
+                  <AlertDescription>
+                    Server sedang bangun atau sibuk, mohon tunggu sebentar...
+                  </AlertDescription>
+                </Alert>
+              )}
+              {error && (
+                <Alert variant="destructive" role="alert">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          {loading && <Skeleton className="h-48 w-full" />}
+
+          {!loading && !result && (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                Hasil analisis akan muncul di sini.
+              </CardContent>
+            </Card>
+          )}
+
+          {!loading && result && (
+            <>
+              <PredictionResult prediction={result} />
+              <FeedbackForm key={result.id} predictionId={result.id} />
+            </>
+          )}
+        </div>
+      </div>
+    </PageShell>
   );
 }
