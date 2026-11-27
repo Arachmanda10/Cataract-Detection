@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
 type Initial = { isCorrect: boolean; comment: string | null } | null;
@@ -31,7 +36,6 @@ export function FeedbackForm({
     }
   }
 
-
   async function send(isCorrect: boolean) {
     setSaving(true);
     setError(null);
@@ -49,48 +53,64 @@ export function FeedbackForm({
     }
   }
 
+  const commentId = `feedback-comment-${predictionId}`;
+
   return (
-    <section className="flex flex-col gap-3 rounded border p-4">
-      <h2 className="font-medium">Apakah hasil ini sesuai menurut Anda?</h2>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        maxLength={500}
-        placeholder="Komentar (opsional)"
-        className="rounded border p-2 text-sm"
-        rows={2}
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={() => send(true)}
-          disabled={saving}
-          className="rounded border px-3 py-2 disabled:opacity-50"
-        >
-          Sudah benar
-        </button>
-        <button
-          onClick={() => send(false)}
-          disabled={saving}
-          className="rounded border px-3 py-2 disabled:opacity-50"
-        >
-          Salah
-        </button>
-      </div>
-            {saved !== null && (
-        <>
-          <p className="text-sm text-green-700">
-            Tersimpan: hasil dinilai {saved ? "benar" : "salah"}. Anda masih bisa mengubahnya.
-          </p>
-          <button
-            onClick={remove}
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg">Apakah hasil ini sesuai menurut Anda?</h2>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor={commentId}>Komentar (opsional)</Label>
+          <Textarea
+            id={commentId}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={500}
+            rows={2}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant={saved === true ? "default" : "outline"}
+            onClick={() => send(true)}
             disabled={saving}
-            className="self-start text-sm underline disabled:opacity-50"
           >
-            Hapus penilaian
-          </button>
-        </>
-      )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
-    </section>
+            Sudah benar
+          </Button>
+          <Button
+            type="button"
+            variant={saved === false ? "default" : "outline"}
+            onClick={() => send(false)}
+            disabled={saving}
+          >
+            Salah
+          </Button>
+        </div>
+        {saved !== null && (
+          <div className="space-y-1">
+            <p role="status" className="text-sm text-primary">
+              Tersimpan: hasil dinilai {saved ? "benar" : "salah"}. Anda masih bisa mengubahnya.
+            </p>
+            <Button
+              type="button"
+              variant="link"
+              onClick={remove}
+              disabled={saving}
+              className="h-auto p-0 text-muted-foreground"
+            >
+              Hapus penilaian
+            </Button>
+          </div>
+        )}
+        {error && (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 }
