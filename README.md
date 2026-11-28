@@ -1,137 +1,104 @@
-# 👁️ Deteksi Katarak dari Citra Mata dengan MobileNetV2
+# Drishti: Deteksi Dini Katarak
 
-Proyek klasifikasi biner (`cataract` vs `normal`) dari foto mata menggunakan **transfer learning MobileNetV2** dengan TensorFlow/Keras. Dikerjakan di Google Colab (GPU T4).
+Aplikasi web full stack untuk skrining awal katarak dari foto mata, memakai model MobileNetV2 yang dijalankan langsung di dalam API Express.
 
-> ⚠️ **Disclaimer:** proyek ini dibuat untuk tujuan pembelajaran dan portofolio. Model **bukan alat diagnosis medis** dan tidak boleh menggantikan pemeriksaan oleh dokter mata.
+> **English:** Full-stack web app that screens eye photos for cataract with a MobileNetV2 model served via ONNX Runtime inside an Express API. Next.js, Express 5, PostgreSQL, Backblaze B2, deployed on Vercel.
 
-## 📌 Ringkasan
+> ⚠️ **Bukan alat medis.** Proyek ini untuk pembelajaran dan portofolio. Hasilnya tidak menggantikan pemeriksaan dokter mata.
 
-| Item | Keterangan |
-|---|---|
-| Tugas | Klasifikasi gambar biner: katarak / normal |
-| Model | MobileNetV2 (bobot ImageNet) + GlobalAveragePooling + Dropout (0,2) + Dense (2, softmax) |
-| Input | 224 × 224 × 3, normalisasi ke rentang [-1, 1] |
-| Framework | TensorFlow / Keras |
-| Akurasi test | **91,74%** |
-| Format ekspor | `.keras`, `.h5`, `.tflite` |
+**Demo:** https://cataract-detection-pied.vercel.app/ · **API docs (Swagger):** https://cataract-detection-pavg.vercel.app/docs
 
-## 📂 Dataset
+![Landing page](docs/screenshots/landing-page.png)
 
-- Sumber: [Cataract Image Dataset (Kaggle, nandanp6)](https://www.kaggle.com/datasets/nandanp6/cataract-image-dataset)
-- Dataset **tidak disertakan** di repository ini. Unduh langsung dari Kaggle (lihat bagian *Cara Menjalankan*).
+## Fitur
 
-| Split | Cataract | Normal | Total |
-|---|---|---|---|
-| Train | 245 | 246 | 491 |
-| Test | 61 | 60 | 121 |
+- Daftar dan masuk (email dan kata sandi, Better Auth)
+- Unggah foto mata, foto diperkecil di browser, lalu dianalisis model
+- Riwayat prediksi dengan foto, detail, dan hapus
+- Penilaian benar/salah dari pengguna terhadap hasil model
+- Dashboard pribadi: total, rata-rata keyakinan, grafik 7 hari
+- Panel admin: statistik, kelola user (role, blokir, hapus), monitoring prediksi, kondisi server
+- Mode terang dan gelap, tampilan responsif
 
-Data train dibagi lagi 80% untuk training (393 gambar) dan 20% untuk validasi (98 gambar). Data test dipakai hanya untuk evaluasi akhir.
+## Tangkapan layar
 
-Ukuran gambar pada dataset sangat bervariasi (misalnya 117×123 hingga 2272×1476 piksel), sehingga semua gambar di-resize ke 224×224.
-
-## 🔄 Alur Kerja
-
-1. **Validasi data:** cek jumlah per kelas, contoh visual, ukuran gambar, dan file rusak.
-2. **Pipeline data:** resize 224×224, batch 32, seed tetap (42).
-3. **Augmentasi (hanya data train):** flip horizontal, rotasi acak ±5%, zoom acak ±10%.
-4. **Preprocessing:** `mobilenet_v2.preprocess_input`.
-5. **Training:** Adam (learning rate 0,0001), categorical crossentropy, EarlyStopping pada `val_loss` (patience 5, bobot terbaik dipulihkan).
-6. **Evaluasi:** akurasi, confusion matrix, precision/recall/F1.
-7. **Ekspor model** dan inferensi pada gambar baru.
-
-## 📊 Hasil
-
-**Test set (121 gambar):** loss 0,2062 · akurasi 0,9174
-
-| Kelas | Precision | Recall | F1-score | Support |
-|---|---|---|---|---|
-| cataract | 0,86 | 1,00 | 0,92 | 61 |
-| normal | 1,00 | 0,83 | 0,91 | 60 |
-
-**Confusion matrix** (baris = aktual, kolom = prediksi):
-
-| | Pred. cataract | Pred. normal |
+| Prediksi | Dashboard | Admin |
 |---|---|---|
-| **Aktual cataract** | 61 | 0 |
-| **Aktual normal** | 10 | 50 |
+| ![](docs/screenshots/predict.png) | ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/admin.png) |
 
-**Interpretasi singkat:**
-- Seluruh gambar katarak pada test set terdeteksi (tidak ada *false negative*).
-- 10 gambar normal salah diprediksi sebagai katarak. Pola ini relatif lebih aman untuk konteks skrining, karena lebih baik meminta pemeriksaan ulang daripada melewatkan katarak.
+## Arsitektur
 
-## ⚠️ Keterbatasan
+```
+Browser ─► Next.js (Vercel) ──/api/* rewrite──► Express (Vercel Function)
+                                                  ├─ onnxruntime-node (model MobileNetV2)
+                                                  ├─ PostgreSQL (Neon) via Drizzle
+                                                  └─ Backblaze B2 (foto, URL bertanda tangan)
+```
 
-- **Data kecil:** test set hanya 121 gambar (1 gambar ≈ 0,83 poin persentase) dan validasi hanya 98 gambar, sehingga estimasi performa memiliki ketidakpastian yang cukup lebar.
-- **Overfitting:** akurasi training mencapai ±100% sementara akurasi validasi 83–91%. Training dihentikan oleh EarlyStopping pada epoch 13 dengan bobot terbaik dari epoch 8.
-- **Seluruh MobileNetV2 ikut dilatih** (±2,23 juta dari ±2,26 juta parameter bersifat *trainable*), bukan hanya head klasifikasi.
-- **Kualitas data beragam:** gambar berasal dari sumber dengan ukuran dan kondisi pengambilan yang berbeda-beda. Keberadaan gambar duplikat antara train dan test belum diperiksa.
-- **Confidence bukan probabilitas klinis:** nilai softmax yang tinggi tidak menjamin prediksi benar.
-- Belum divalidasi pada data dari perangkat atau populasi lain.
+| Bagian | Teknologi |
+|---|---|
+| Frontend | Next.js 16, Tailwind CSS v4, shadcn/ui |
+| Backend | Express 5, TypeScript, Better Auth, Drizzle ORM |
+| ML | MobileNetV2 (TensorFlow/Keras → ONNX), ONNX Runtime |
+| Data | PostgreSQL (Neon), Backblaze B2 |
+| Mutu | Vitest, GitHub Actions (CI backend dan frontend), Swagger/OpenAPI |
+| Hosting | Vercel (dua proyek: `frontend` dan `backend`) |
 
-## 🚀 Cara Menjalankan
+## Model
 
-### Di Google Colab (disarankan)
+- Arsitektur: MobileNetV2, kelas `cataract` dan `normal`, input 224×224, normalisasi `x/127.5 - 1`
+- Data latih: (https://www.kaggle.com/datasets/nandanp6/cataract-image-dataset)
+- Hasil evaluasi: < Akurasi 91.74% / Recall 92% / Precision 92%>
+- Notebook pelatihan: (https://colab.research.google.com/drive/1XwmwOsYEuVQW94YHh-6P33YXJatiXOwT)
 
-1. Buka `notebooks/Cataract_Detect.ipynb` di Colab.
-2. Aktifkan GPU: **Runtime → Change runtime type → T4 GPU**.
-3. Jalankan seluruh sel dari atas ke bawah. Notebook akan mengunduh dataset via `kagglehub` dan menyimpannya ke Google Drive Anda.
+Angka evaluasi berasal dari data uji dataset yang sama, bukan dari foto klinis nyata, jadi jangan dibaca sebagai akurasi diagnosis.
 
-### Secara lokal
+## Menjalankan lokal
+
+Prasyarat: Node.js 22+, database PostgreSQL (mis. proyek gratis Neon), bucket Backblaze B2.
 
 ```bash
-git clone https://github.com/Arachmanda10/cataract-detection.git
-cd cataract-detection
-pip install -r requirements.txt
+git clone https://github.com/Arachmanda10/Cataract-Detection.git && cd Cataract-Detection
+
+# Backend
+cd backend
+cp .env.example .env        # isi nilainya, jangan commit .env
+npm install
+npm run dev
+
+# Frontend (terminal lain)
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
 ```
 
-Notebook memakai `google.colab` (mount Drive dan upload file), jadi bagian tersebut perlu disesuaikan jika dijalankan di luar Colab.
+Variabel lingkungan dijelaskan di `backend/.env.example` dan `frontend/.env.example`.
 
-### Memakai model hasil training
+## Pengujian
 
-Preprocessing **tidak tersimpan di dalam model**. Gambar harus di-resize ke 224×224 lalu dinormalisasi dengan `tf.keras.applications.mobilenet_v2.preprocess_input` sebelum diprediksi.
-
-```python
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras.utils import load_img, img_to_array
-
-model = tf.keras.models.load_model("models/cataract_model.keras")
-class_names = ["cataract", "normal"]
-
-img = load_img("contoh.png", target_size=(224, 224))
-x = np.expand_dims(img_to_array(img), axis=0)
-x = tf.keras.applications.mobilenet_v2.preprocess_input(x)
-
-pred = model.predict(x, verbose=0)[0]
-print(class_names[np.argmax(pred)], f"{pred.max():.2%}")
+```bash
+cd backend && npm test
+cd frontend && npm run lint && npm run build
 ```
 
-## 🗂️ Struktur Repository
+## Keputusan teknis dan batasan yang diketahui
 
-```
-cataract-detection/
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── notebooks/
-│   └── Cataract_Detect.ipynb
-└── models/            # opsional: model berukuran kecil (mis. .tflite)
-```
+- **Inferensi di dalam Express.** Model kecil (±15 ms per gambar), jadi tidak perlu layanan ML terpisah. Biaya: model ikut dimuat di fungsi serverless.
+- **Backend di Vercel Function.** Ada batas body permintaan 4,5 MB, sehingga foto diperkecil di browser dan dibatasi 4 MB. Cold start bisa menambah beberapa detik pada permintaan pertama.
+- **Pembatas laju (rate limit) per instance.** Penghitungnya ada di memori, jadi tidak dibagi antar-instance serverless. Untuk produksi sungguhan perlu penyimpanan bersama (mis. Redis).
+- **Hari di grafik dihitung dalam UTC**, jadi prediksi sebelum 07:00 WIB tercatat di hari sebelumnya.
+- **Penilaian pengguna bukan akurasi klinis.** Tidak ada label asli dari dokter.
+- **Foto privat.** Disimpan di bucket privat dan ditampilkan lewat tautan sementara (5 menit).
+- **Tidak memakai kartu kredit** pada layanan mana pun (Vercel Hobby, Neon, B2 free tier).
 
-## 🛠️ Rencana Pengembangan
+## Peta jalan
 
-- Membekukan base model, lalu fine-tuning bertahap dengan learning rate lebih kecil.
-- Memeriksa duplikasi gambar antara train dan test.
-- Menambah data dan memakai validasi silang agar evaluasi lebih stabil.
-- Menambahkan visualisasi Grad-CAM untuk melihat area gambar yang memengaruhi prediksi.
-- Memasukkan preprocessing ke dalam model agar lebih mudah di-deploy.
+- [ ] Verifikasi email saat registrasi
+- [ ] Masuk dengan Google
+- [ ] Rate limit terpusat
+- [ ] Evaluasi model pada data yang lebih beragam
 
-## 🙏 Kredit
+## Lisensi
 
-- Dataset: [nandanp6/cataract-image-dataset](https://www.kaggle.com/datasets/nandanp6/cataract-image-dataset) di Kaggle.
-- Arsitektur: [MobileNetV2](https://arxiv.org/abs/1801.04381) (Sandler dkk., 2018), bobot pretrained ImageNet dari Keras Applications.
-
-## 👤 Penulis
-
-**Arachmanda10**
-GitHub: [@Arachmanda10](https://github.com/Arachmanda10)
+<MIT>
