@@ -8,7 +8,7 @@ Aplikasi web full stack untuk skrining awal katarak dari foto mata, memakai mode
 
 **Demo:** https://cataract-detection-pied.vercel.app/ · **API docs (Swagger):** https://cataract-detection-pavg.vercel.app/docs
 
-![Landing page](docs/screenshots/landing-page.png)
+![Landing page] (docs/screenshoots/landing-page.png)
 
 ## Fitur
 
@@ -24,7 +24,7 @@ Aplikasi web full stack untuk skrining awal katarak dari foto mata, memakai mode
 
 | Prediksi | Dashboard | Admin |
 |---|---|---|
-| ![](docs/screenshots/predict.png) | ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/admin.png) |
+| ![](docs/screenshoots/predict.png) | ![](docs/screenshoots/dashboard.png) | ![](docs/screenshoots/admin.png) |
 
 ## Arsitektur
 
