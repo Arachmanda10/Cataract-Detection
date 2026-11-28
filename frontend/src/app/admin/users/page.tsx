@@ -2,15 +2,32 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AppNav } from "@/components/app-nav";
+import { PageShell } from "@/components/page-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 import type { AdminUser } from "@/lib/types";
 import { useRequireAdmin } from "@/lib/use-require-admin";
-import { authClient } from "@/lib/auth-client";
 
 const LIMIT = 10;
 
 type ActionResult = { error: { message?: string } | null };
+type Pending = { kind: "role" | "ban" | "delete"; user: AdminUser } | null;
 
 export default function AdminUsersPage() {
   const { session, ready } = useRequireAdmin();
@@ -28,12 +45,14 @@ export default function AdminUsersPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [pending, setPending] = useState<Pending>(null);
+  const [banReason, setBanReason] = useState("");
 
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
 
-        authClient.admin
+    authClient.admin
       .listUsers({
         query: {
           limit: LIMIT,
@@ -90,138 +109,173 @@ export default function AdminUsersPage() {
     setSearch(searchInput.trim());
   }
 
-  function toggleRole(u: AdminUser) {
-    const next = u.role === "admin" ? "user" : "admin";
-    if (!window.confirm(`Ubah role ${u.email} menjadi "${next}"?`)) return;
-    run(u.id, () => authClient.admin.setRole({ userId: u.id, role: next }));
-  }
-
-  function ban(u: AdminUser) {
-    const reason = window.prompt(`Alasan memblokir ${u.email} (boleh dikosongkan):`);
-    if (reason === null) return; // dibatalkan
-    run(u.id, () =>
-      authClient.admin.banUser({ userId: u.id, banReason: reason.trim() || undefined }),
-    );
+  function ask(kind: "role" | "ban" | "delete", user: AdminUser) {
+    setBanReason("");
+    setPending({ kind, user });
   }
 
   function unban(u: AdminUser) {
     run(u.id, () => authClient.admin.unbanUser({ userId: u.id }));
   }
 
-  function remove(u: AdminUser) {
-    if (
-      !window.confirm(
-        `Hapus ${u.email} beserta semua prediksi dan fotonya? Tindakan ini tidak bisa dibatalkan.`,
-      )
-    ) {
-      return;
+  function confirmPending() {
+    if (!pending) return;
+    const { kind, user: u } = pending;
+    setPending(null);
+
+    if (kind === "role") {
+      const next = u.role === "admin" ? "user" : "admin";
+      run(u.id, () => authClient.admin.setRole({ userId: u.id, role: next }));
+    } else if (kind === "ban") {
+      run(u.id, () =>
+        authClient.admin.banUser({ userId: u.id, banReason: banReason.trim() || undefined }),
+      );
+    } else {
+      run(u.id, async () => {
+        try {
+          await api(`/api/admin/users/${u.id}`, { method: "DELETE" });
+          return { error: null };
+        } catch (err) {
+          return { error: { message: err instanceof Error ? err.message : undefined } };
+        }
+      });
     }
-    run(u.id, async () => {
-      try {
-        await api(`/api/admin/users/${u.id}`, { method: "DELETE" });
-        return { error: null };
-      } catch (err) {
-        return { error: { message: err instanceof Error ? err.message : undefined } };
-      }
-    });
   }
 
-  if (!ready) return <main className="p-6">Memuat...</main>;
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   const loading = !error && (!result || result.page !== page || result.search !== search);
   const totalPages = Math.max(1, Math.ceil((result?.total ?? 0) / LIMIT));
   const myId = session?.user.id;
 
-  return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 p-6">
-      <AppNav />
-      <Link href="/admin" className="text-sm underline">
-        ← Kembali ke admin
-      </Link>
-      <h1 className="text-2xl font-semibold">Kelola User</h1>
+  const dialogTitle =
+    pending?.kind === "role"
+      ? `Ubah role menjadi "${pending.user.role === "admin" ? "user" : "admin"}"?`
+      : pending?.kind === "ban"
+        ? "Blokir user ini?"
+        : "Hapus user ini?";
+  const dialogText =
+    pending?.kind === "delete"
+      ? `${pending.user.email} beserta semua prediksi dan fotonya akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
+      : pending
+        ? pending.user.email
+        : "";
 
+  return (
+    <PageShell
+      title="Kelola user"
+      description="Cari, ubah role, blokir, atau hapus pengguna."
+      actions={
+        <Link href="/admin" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          ← Kembali ke admin
+        </Link>
+      }
+    >
       <form onSubmit={onSearch} className="flex gap-2">
-        <input
+        <Input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Cari berdasarkan email"
-          className="flex-1 rounded border p-2 text-sm"
+          aria-label="Cari berdasarkan email"
+          className="flex-1"
         />
-        <button className="rounded bg-black px-3 py-2 text-sm text-white">Cari</button>
+        <Button type="submit">Cari</Button>
       </form>
 
       {error && (
-        <p className="text-sm text-red-600">
-          {error}{" "}
-          <button onClick={() => setReloadKey((k) => k + 1)} className="underline">
-            Coba lagi
-          </button>
-        </p>
+        <Alert variant="destructive" role="alert">
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            {error}
+            <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+              Coba lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
-      {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+      {actionError && (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
 
-      {!result && loading && <p className="text-sm text-gray-600">Memuat user...</p>}
+      {!result && loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      )}
 
       {result && result.users.length === 0 && (
-        <p className="text-sm text-gray-600">User tidak ditemukan.</p>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            User tidak ditemukan.
+          </CardContent>
+        </Card>
       )}
 
       {result && result.users.length > 0 && (
-        <ul className={`flex flex-col gap-3 ${loading ? "opacity-50" : ""}`}>
+        <ul className={`space-y-3 ${loading ? "opacity-50" : ""}`}>
           {result.users.map((u) => {
             const isMe = u.id === myId;
             const busy = busyId === u.id;
             return (
-              <li key={u.id} className="flex flex-col gap-2 rounded border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{u.name}</span>
-                  {isMe && <span className="rounded border px-2 text-xs">Anda</span>}
-                  {u.role === "admin" && (
-                    <span className="rounded bg-black px-2 text-xs text-white">Admin</span>
-                  )}
-                  {u.banned && (
-                    <span className="rounded bg-red-600 px-2 text-xs text-white">Diblokir</span>
-                  )}
+              <li
+                key={u.id}
+                className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{u.name}</span>
+                    {isMe && <Badge variant="outline">Anda</Badge>}
+                    {u.role === "admin" && <Badge>Admin</Badge>}
+                    {u.banned && <Badge variant="destructive">Diblokir</Badge>}
+                  </div>
+                  <p className="truncate text-sm text-muted-foreground">{u.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Terdaftar{" "}
+                    {new Date(u.createdAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
+                    {u.banned && u.banReason ? ` · Alasan blokir: ${u.banReason}` : ""}
+                  </p>
                 </div>
-                <span className="text-sm text-gray-600">{u.email}</span>
-                <span className="text-xs text-gray-500">
-                  Terdaftar{" "}
-                  {new Date(u.createdAt).toLocaleDateString("id-ID", { dateStyle: "medium" })}
-                  {u.banned && u.banReason ? ` · Alasan blokir: ${u.banReason}` : ""}
-                </span>
                 {!isMe && (
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <button
-                      onClick={() => toggleRole(u)}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => ask("role", u)}
                       disabled={busy}
-                      className="rounded border px-2 py-1 disabled:opacity-50"
                     >
                       {u.role === "admin" ? "Jadikan user" : "Jadikan admin"}
-                    </button>
+                    </Button>
                     {u.banned ? (
-                      <button
-                        onClick={() => unban(u)}
-                        disabled={busy}
-                        className="rounded border px-2 py-1 disabled:opacity-50"
-                      >
+                      <Button variant="outline" size="sm" onClick={() => unban(u)} disabled={busy}>
                         Buka blokir
-                      </button>
+                      </Button>
                     ) : (
-                      <button
-                        onClick={() => ban(u)}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => ask("ban", u)}
                         disabled={busy}
-                        className="rounded border px-2 py-1 disabled:opacity-50"
                       >
                         Blokir
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      onClick={() => remove(u)}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => ask("delete", u)}
                       disabled={busy}
-                      className="rounded border border-red-600 px-2 py-1 text-red-600 disabled:opacity-50"
                     >
                       {busy ? "Memproses..." : "Hapus"}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </li>
@@ -231,26 +285,59 @@ export default function AdminUsersPage() {
       )}
 
       {result && result.total > 0 && (
-        <div className="flex items-center justify-between text-sm">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page <= 1 || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
-          >
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <Button variant="outline" onClick={() => setPage(page - 1)} disabled={page <= 1 || loading}>
             Sebelumnya
-          </button>
-          <span>
+          </Button>
+          <span className="text-muted-foreground">
             Halaman {page} dari {totalPages} ({result.total} user)
           </span>
-          <button
+          <Button
+            variant="outline"
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
           >
             Berikutnya
-          </button>
+          </Button>
         </div>
       )}
-    </main>
+
+      <AlertDialog
+        open={pending !== null}
+        onOpenChange={(open) => {
+          if (!open) setPending(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{dialogText}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {pending?.kind === "ban" && (
+            <div className="space-y-2">
+              <Label htmlFor="alasan-blokir">Alasan (boleh dikosongkan)</Label>
+              <Input
+                id="alasan-blokir"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+              />
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <Button
+              variant={pending?.kind === "role" ? "default" : "destructive"}
+              onClick={confirmPending}
+            >
+              {pending?.kind === "role"
+                ? "Ya, ubah"
+                : pending?.kind === "ban"
+                  ? "Ya, blokir"
+                  : "Ya, hapus"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageShell>
   );
 }

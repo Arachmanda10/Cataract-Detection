@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AppNav } from "@/components/app-nav";
+import { PageShell } from "@/components/page-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { LABEL_TEXT } from "@/lib/labels";
 import type { AdminPredictionList, AdminPredictionRow } from "@/lib/types";
@@ -10,9 +16,16 @@ import { useRequireAdmin } from "@/lib/use-require-admin";
 
 const LIMIT = 20;
 
-function feedbackText(r: AdminPredictionRow) {
-  if (r.feedbackCorrect === null) return "Belum dinilai";
-  return r.feedbackCorrect ? "Dinilai benar" : "Dinilai salah";
+const selectClass =
+  "h-10 rounded-lg border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring dark:[color-scheme:dark]";
+
+function FeedbackBadge({ r }: { r: AdminPredictionRow }) {
+  if (r.feedbackCorrect === null) return <Badge variant="outline">Belum dinilai</Badge>;
+  return r.feedbackCorrect ? (
+    <Badge variant="secondary">Dinilai benar</Badge>
+  ) : (
+    <Badge variant="destructive">Dinilai salah</Badge>
+  );
 }
 
 export default function AdminPredictionsPage() {
@@ -63,89 +76,113 @@ export default function AdminPredictionsPage() {
     setFeedback(v);
   }
 
-  if (!ready) return <main className="p-6">Memuat...</main>;
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   const list = result?.list;
   const loading = !error && result?.key !== `${page}|${label}|${feedback}`;
   const totalPages = Math.max(1, list?.pagination.totalPages ?? 1);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 p-6">
-      <AppNav />
-      <Link href="/admin" className="text-sm underline">
-        ← Kembali ke admin
-      </Link>
-      <h1 className="text-2xl font-semibold">Monitoring Prediksi</h1>
-
-      <div className="flex flex-wrap gap-3 text-sm">
-        <label className="flex items-center gap-2">
-          Hasil
+    <PageShell
+      title="Monitoring prediksi"
+      description="Semua prediksi dari seluruh pengguna."
+      actions={
+        <Link href="/admin" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          ← Kembali ke admin
+        </Link>
+      }
+    >
+      <div className="flex flex-wrap gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="filter-hasil">Hasil</Label>
           <select
+            id="filter-hasil"
             value={label}
             onChange={(e) => changeLabel(e.target.value)}
-            className="rounded border p-2"
+            className={selectClass}
           >
             <option value="">Semua</option>
             <option value="cataract">{LABEL_TEXT.cataract}</option>
             <option value="normal">{LABEL_TEXT.normal}</option>
           </select>
-        </label>
-        <label className="flex items-center gap-2">
-          Penilaian user
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="filter-penilaian">Penilaian user</Label>
           <select
+            id="filter-penilaian"
             value={feedback}
             onChange={(e) => changeFeedback(e.target.value)}
-            className="rounded border p-2"
+            className={selectClass}
           >
             <option value="">Semua</option>
             <option value="correct">Dinilai benar</option>
             <option value="incorrect">Dinilai salah</option>
             <option value="none">Belum dinilai</option>
           </select>
-        </label>
+        </div>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600">
-          {error}{" "}
-          <button onClick={() => setReloadKey((k) => k + 1)} className="underline">
-            Coba lagi
-          </button>
-        </p>
+        <Alert variant="destructive" role="alert">
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            {error}
+            <Button variant="outline" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
+              Coba lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
-      {!list && loading && <p className="text-sm text-gray-600">Memuat prediksi...</p>}
+      {!list && loading && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full" />
+          ))}
+        </div>
+      )}
 
       {list && list.data.length === 0 && (
-        <p className="text-sm text-gray-600">Tidak ada prediksi yang cocok dengan filter.</p>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Tidak ada prediksi yang cocok dengan filter.
+          </CardContent>
+        </Card>
       )}
 
       {list && list.data.length > 0 && (
-        <ul className={`flex flex-col gap-3 ${loading ? "opacity-50" : ""}`}>
+        <ul className={`grid gap-4 lg:grid-cols-2 ${loading ? "opacity-50" : ""}`}>
           {list.data.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/admin/predictions/${r.id}`}
-                className="flex flex-col gap-1 rounded border p-3 hover:bg-gray-50"
+                className="flex h-full flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium">{LABEL_TEXT[r.label]}</span>
-                  <span className="text-sm text-gray-600">
+                  <Badge variant={r.label === "cataract" ? "destructive" : "default"}>
+                    {LABEL_TEXT[r.label]}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
                     {(r.confidence * 100).toFixed(1)}% · {r.inferenceMs} ms
                   </span>
                 </div>
-                <span className="text-sm text-gray-600">{r.userEmail}</span>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                <span className="truncate text-sm">{r.userEmail}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>
                     {new Date(r.createdAt).toLocaleString("id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
                   </span>
-                  <span>{feedbackText(r)}</span>
+                  <FeedbackBadge r={r} />
                 </div>
                 {r.feedbackComment && (
-                  <span className="truncate text-xs text-gray-600">
+                  <span className="truncate text-xs text-muted-foreground">
                     Komentar: {r.feedbackComment}
                   </span>
                 )}
@@ -156,26 +193,22 @@ export default function AdminPredictionsPage() {
       )}
 
       {list && list.pagination.totalItems > 0 && (
-        <div className="flex items-center justify-between text-sm">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page <= 1 || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
-          >
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <Button variant="outline" onClick={() => setPage(page - 1)} disabled={page <= 1 || loading}>
             Sebelumnya
-          </button>
-          <span>
+          </Button>
+          <span className="text-muted-foreground">
             Halaman {page} dari {totalPages} ({list.pagination.totalItems} prediksi)
           </span>
-          <button
+          <Button
+            variant="outline"
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
           >
             Berikutnya
-          </button>
+          </Button>
         </div>
       )}
-    </main>
+    </PageShell>
   );
 }

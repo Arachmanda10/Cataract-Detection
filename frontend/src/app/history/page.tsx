@@ -3,13 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AppNav } from "@/components/app-nav";
+import { PageShell } from "@/components/page-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError } from "@/lib/api";
 import { LABEL_TEXT } from "@/lib/labels";
 import type { PredictionList } from "@/lib/types";
 import { useRequireLogin } from "@/lib/use-require-login";
 
-const LIMIT = 10;
+const LIMIT = 12;
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -57,62 +62,86 @@ export default function HistoryPage() {
     setReloadKey((k) => k + 1);
   }
 
-  if (!ready) return <main className="p-6">Memuat...</main>;
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   const list = state?.list;
   const loading = !error && state?.page !== page;
   const totalPages = Math.max(1, list?.pagination.totalPages ?? 1);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6">
-      <AppNav />
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Riwayat Prediksi</h1>
-        <button onClick={reload} className="text-sm underline">
+    <PageShell
+      title="Riwayat prediksi"
+      description="Semua analisis foto yang pernah Anda lakukan."
+      actions={
+        <Button variant="outline" size="sm" onClick={reload}>
           Muat ulang
-        </button>
-      </div>
-
+        </Button>
+      }
+    >
       {error && (
-        <p className="text-sm text-red-600">
-          {error}{" "}
-          <button onClick={reload} className="underline">
-            Coba lagi
-          </button>
-        </p>
+        <Alert variant="destructive" role="alert">
+          <AlertDescription className="flex flex-wrap items-center gap-3">
+            {error}
+            <Button variant="outline" size="sm" onClick={reload}>
+              Coba lagi
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
-      {!list && loading && <p className="text-sm text-gray-600">Memuat riwayat...</p>}
+      {!list && loading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
+        </div>
+      )}
 
       {list && list.pagination.totalItems === 0 && (
-        <p className="text-sm text-gray-600">
-          Belum ada prediksi.{" "}
-          <Link href="/predict" className="underline">
-            Coba analisis foto pertama Anda
-          </Link>
-          .
-        </p>
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <p className="text-muted-foreground">Belum ada prediksi.</p>
+            <Link href="/predict" className={buttonVariants({ variant: "cta" })}>
+              Analisis foto pertama Anda
+            </Link>
+          </CardContent>
+        </Card>
       )}
 
       {list && list.data.length > 0 && (
-        <ul className={`flex flex-col gap-3 ${loading ? "opacity-50" : ""}`}>
+        <ul
+          className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${loading ? "opacity-50" : ""}`}
+        >
           {list.data.map((p) => (
             <li key={p.id}>
               <Link
                 href={`/history/${p.id}`}
-                className="flex items-center gap-4 rounded border p-3 hover:bg-gray-50"
+                className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={p.imageUrl}
                   alt="Foto mata"
                   loading="lazy"
-                  className="h-16 w-16 rounded border object-cover"
+                  className="aspect-video w-full bg-muted object-cover"
                 />
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium">{LABEL_TEXT[p.label]}</span>
-                  <span className="text-sm text-gray-600">
-                    Keyakinan {(p.confidence * 100).toFixed(1)}% ·{" "}
+                <div className="flex flex-1 flex-col gap-2 p-4">
+                  <Badge
+                    variant={p.label === "cataract" ? "destructive" : "default"}
+                    className="w-fit"
+                  >
+                    {LABEL_TEXT[p.label]}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Keyakinan {(p.confidence * 100).toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground">
                     {new Date(p.createdAt).toLocaleString("id-ID", {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -126,26 +155,26 @@ export default function HistoryPage() {
       )}
 
       {list && list.pagination.totalItems > 0 && (
-        <div className="flex items-center justify-between text-sm">
-          <button
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <Button
+            variant="outline"
             onClick={() => goTo(page - 1)}
             disabled={page <= 1 || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
           >
             Sebelumnya
-          </button>
-          <span>
+          </Button>
+          <span className="text-muted-foreground">
             Halaman {page} dari {totalPages} ({list.pagination.totalItems} prediksi)
           </span>
-          <button
+          <Button
+            variant="outline"
             onClick={() => goTo(page + 1)}
             disabled={page >= totalPages || loading}
-            className="rounded border px-3 py-2 disabled:opacity-50"
           >
             Berikutnya
-          </button>
+          </Button>
         </div>
       )}
-    </main>
+    </PageShell>
   );
 }
